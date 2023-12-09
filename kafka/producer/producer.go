@@ -18,12 +18,12 @@ type Producer struct {
 	count  counter.MessageCounter
 }
 
-func (p *Producer) GetMessageCount() int {
+func (p *Producer) GetMessageCount() (int, *map[string]bool) {
 	return p.count.GetMessageCount()
 }
 
-func (p *Producer) IncrementCount() {
-	p.count.Increment()
+func (p *Producer) IncrementCount(message string) {
+	p.count.Increment(message)
 }
 
 // NewProducer creates a new instance of the Producer with the provided Kafka configuration.
@@ -36,6 +36,7 @@ func NewProducer(cfg config.KafkaCfg, topic string) *Producer {
 			BatchSize:    0,
 			BatchTimeout: 500 * time.Millisecond,
 		}),
+		count: counter.NewMessageCounter(),
 	}
 }
 
@@ -77,12 +78,13 @@ func (p *Producer) SendMessageWithRandomKey(ctx context.Context, maxItirations i
 			if err != nil {
 				// Handle the error (e.g., log it)
 				log.Println("Error sending message:", err)
+				time.Sleep(5 * time.Second)
 			} else {
-				p.IncrementCount()
+				p.IncrementCount(randomMessage)
 			}
 
 			// Sleep for a short duration (e.g., 1 second) before sending the next message
-			// time.Sleep(50 * time.Millisecond)
+			time.Sleep(1 * time.Second)
 		}
 	}
 	log.Println("Stopping message generation.")

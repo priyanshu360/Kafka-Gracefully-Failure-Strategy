@@ -21,6 +21,16 @@ func NewKafkaCfg() KafkaCfg {
 	}
 }
 
+func NewKafkaCfgWithPort(port string) KafkaCfg {
+	return KafkaCfg{
+		host:          getEnv("KAFKA_HOST", "localhost"),
+		port:          port,
+		topic:         getEnv("KAFKA_TOPIC", "main_topic"),
+		dlqTopic:      getEnv("KAFKA_DLQ_TOPIC", "dead_letter_topic"),
+		readerGroupId: getEnv("READER_GROUP_ID", "reader_group"),
+	}
+}
+
 func getEnv(key, defaultValue string) string {
 	value, exists := os.LookupEnv(key)
 	if !exists {
