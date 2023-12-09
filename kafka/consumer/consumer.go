@@ -8,10 +8,11 @@ import (
 	"os/signal"
 	"regexp"
 	"syscall"
+	"time"
 
 	"github.com/priyanshu360/Kafka-Gracefully-Failure-Strategy/config"
 	"github.com/priyanshu360/Kafka-Gracefully-Failure-Strategy/counter"
-	"github.com/priyanshu360/Kafka-Gracefully-Failure-Strategy/producer"
+	"github.com/priyanshu360/Kafka-Gracefully-Failure-Strategy/kafka/producer"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -24,12 +25,12 @@ type Consumer struct {
 	count           counter.MessageCounter
 }
 
-func (c *Consumer) GetMessageCount() int {
+func (c *Consumer) GetMessageCount() (int, *map[string]bool) {
 	return c.count.GetMessageCount()
 }
 
-func (c *Consumer) IncrementCount() {
-	c.count.Increment()
+func (c *Consumer) IncrementCount(message string) {
+	c.count.Increment(message)
 }
 
 // NewConsumer creates a new instance of the Consumer with the provided Kafka configuration.
@@ -47,6 +48,7 @@ func NewConsumer(cfg config.KafkaCfg, dtw *producer.Producer) *Consumer {
 			StartOffset:    kafka.LastOffset,
 		}),
 		deadTopicWriter: dtw,
+		count:           counter.NewMessageCounter(),
 	}
 }
 
@@ -63,6 +65,7 @@ func (c *Consumer) StartConsumer(ctx context.Context) {
 			msg, err := c.reader.FetchMessage(ctx)
 			if err != nil {
 				log.Println("Error fetching message:", err)
+				time.Sleep(time.Second)
 				continue
 			}
 
@@ -104,12 +107,12 @@ func (c *Consumer) processMessage(msg kafka.Message) bool {
 			fmt.Printf("Failed to write message to dead letter topic: %v\n", err)
 			return false
 		}
-		c.deadTopicWriter.IncrementCount()
+		c.deadTopicWriter.IncrementCount(messageValue)
 		return true
 	}
 
 	fmt.Printf("Received message: %s\n", messageValue)
-	c.IncrementCount()
+	c.IncrementCount(messageValue)
 	return true
 }
 
